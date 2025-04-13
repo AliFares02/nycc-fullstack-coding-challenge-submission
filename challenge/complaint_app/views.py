@@ -8,8 +8,6 @@ from django.db.models import Count
 from datetime import date
 # Create your views here.
 
-# refactored complaint retrieval by district code logic by abstracting into a helper function to eliminate redundancy
-
 def retrieve_complaints_by_district(council_member_district):
   # assuming district numbers dont exceed 99
   if (council_member_district < 10):
@@ -34,7 +32,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
     council_member_dist_as_int = int(self.request.user.userprofile.district)
 
     complaints = retrieve_complaints_by_district(council_member_dist_as_int)
-
+  
     serializer = ComplaintSerializer(complaints, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -73,4 +71,25 @@ class TopComplaintTypeViewSet(viewsets.ModelViewSet):
 
     topThreeComplaints = complaints.values('complaint_type').annotate(totalComplaints=Count('id')).order_by('-totalComplaints')[:3]
     serializer = ComplaintSerializer(topThreeComplaints, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# Bonus viewset for retrieving all complaints made by constituents living in council members district
+# *Due to ambiguity of complaint location relevance, i simply returned all complaints that were made in the same district by constituents that live in the same district as the CM's district
+class ComplaintBySameDistrictViewSet(viewsets.ModelViewSet):
+  http_method_names = ['get'] 
+  def list(self, request):
+    council_member_dist_as_int = int(self.request.user.userprofile.district)
+
+    complaints = retrieve_complaints_by_district(council_member_dist_as_int)
+
+    if (council_member_dist_as_int < 10):
+      council_member_district_as_str = f'0{council_member_dist_as_int}'
+      residentComplaints = complaints.annotate(
+      constituent_dist=Substr('council_dist', 5, Length('council_dist') - 4)
+      ).filter(constituent_dist=council_member_district_as_str)
+    else:
+      council_member_district_as_str = str(council_member_dist_as_int)
+      residentComplaints = complaints.filter(council_dist__endswith=council_member_district_as_str)
+
+    serializer = ComplaintSerializer(residentComplaints, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
