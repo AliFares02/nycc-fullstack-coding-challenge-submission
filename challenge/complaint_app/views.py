@@ -74,7 +74,7 @@ class TopComplaintTypeViewSet(viewsets.ModelViewSet):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Bonus viewset for retrieving all complaints made by constituents living in council members district
-# *Due to ambiguity of complaint location relevance, i simply returned all complaints that were made in the same district by constituents that live in the same district as the CM's district
+# *ignore previous message, i noticed the note in the README later.
 class ComplaintBySameDistrictViewSet(viewsets.ModelViewSet):
   http_method_names = ['get'] 
   def list(self, request):
