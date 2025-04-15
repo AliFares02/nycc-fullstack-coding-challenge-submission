@@ -1,14 +1,27 @@
 import React, { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useHistory } from "react-router-dom";
 
 function Dashboard() {
   const [selectedComplaintOption, setSelectedComplaintOption] =
     useState("all-complaints");
   const [complaints, setComplaints] = useState([]);
   const [topThreeComplaintTypes, setTopThreeComplaintTypes] = useState([]);
+  const [openCaseCount, setOpenCaseCount] = useState(0);
+  const [closedCaseCount, setClosedCaseCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const history = useHistory();
+  const { token } = useAuth();
   useEffect(() => {
+    if (!token) {
+      history.push("/login");
+      return;
+    }
     getAllComplaints();
+    // below calls are for retrieving close/open case counts
+    getOpenOrClosedComplaints("openCases", null);
+    getOpenOrClosedComplaints("closedCases", null);
   }, []);
 
   const getAllComplaints = async () => {
@@ -19,7 +32,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token ",
+            Authorization: `Token ${token}`,
           },
         }
       );
@@ -29,7 +42,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token ",
+            Authorization: `Token ${token}`,
           },
         }
       );
@@ -53,9 +66,8 @@ function Dashboard() {
     }
   };
 
-  // abstract the 3 functions below into a single function and cache the responses to avoid redundant db requests
-
   const getComplaintsBySameDist = async () => {
+    setSelectedComplaintOption("");
     setError(null);
     setLoading(true);
     try {
@@ -65,7 +77,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token ",
+            Authorization: `Token ${token}`,
           },
         }
       );
@@ -83,15 +95,15 @@ function Dashboard() {
     }
   };
 
-  const getOpenComplaints = async () => {
+  const getOpenOrClosedComplaints = async (caseType, selectedComplaint) => {
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/api/complaints/openCases/",
+        `http://127.0.0.1:8000/api/complaints/${caseType}/`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token ",
+            Authorization: `Token ${token}`,
           },
         }
       );
@@ -100,33 +112,18 @@ function Dashboard() {
         throw new Error(response.statusText);
       }
       const complaints = await response.json();
-      setComplaints(complaints);
-      setError(null);
-      setLoading(false);
-    } catch (error) {
-      setError(error.message);
-      setLoading(false);
-    }
-  };
-
-  const getClosedComplaints = async () => {
-    try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/complaints/closedCases/",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Token ",
-          },
+      // If user is looking for open or closed cases, only then modify the complaints state else request is from page reload for purpose of updating case count state
+      if (caseType === "openCases") {
+        setOpenCaseCount(complaints.length);
+        if (selectedComplaint === "open-cases") {
+          setComplaints(complaints);
         }
-      );
-
-      if (!response.ok) {
-        throw new Error(response.statusText);
+      } else if (caseType === "closedCases") {
+        setClosedCaseCount(complaints.length);
+        if (selectedComplaint === "closed-cases") {
+          setComplaints(complaints);
+        }
       }
-      const complaints = await response.json();
-      setComplaints(complaints);
       setError(null);
       setLoading(false);
     } catch (error) {
@@ -138,12 +135,12 @@ function Dashboard() {
   const handleSelectedComplaintOption = (e) => {
     const selectedComplaint = e.target.value;
     setSelectedComplaintOption(selectedComplaint);
-    if (selectedComplaint == "all-complaints") {
+    if (selectedComplaint === "all-complaints") {
       getAllComplaints();
-    } else if (selectedComplaint == "open-cases") {
-      getOpenComplaints();
-    } else if (selectedComplaint == "closed-cases") {
-      getClosedComplaints();
+    } else if (selectedComplaint === "open-cases") {
+      getOpenOrClosedComplaints("openCases", selectedComplaint);
+    } else if (selectedComplaint === "closed-cases") {
+      getOpenOrClosedComplaints("closedCases", selectedComplaint);
     }
   };
 
@@ -161,68 +158,86 @@ function Dashboard() {
           <option value="closed-cases">Closed cases</option>
         </select>
       </h2>
-      <div className="table-container">
-        {!loading ? (
-          <table className="main-complaints-table">
-            <thead>
-              <tr>
-                <th>Account</th>
-                <th>Borough</th>
-                <th>City</th>
-                <th>Close Date</th>
-                <th>Community Board</th>
-                <th>Complaint Type</th>
-                <th>Council Dist</th>
-                <th>Descriptor</th>
-                <th>Open Date</th>
-                <th>Zip Code</th>
-              </tr>
-            </thead>
-            <tbody>
-              {complaints.map((complaint, idx) => (
-                <tr key={idx}>
-                  <td>{complaint.account}</td>
-                  <td>{complaint.borough}</td>
-                  <td>{complaint.city}</td>
-                  <td>{complaint.closedate}</td>
-                  <td>{complaint.community_board}</td>
-                  <td>{complaint.complaint_type}</td>
-                  <td>{complaint.council_dist}</td>
-                  <td>{complaint.descriptor}</td>
-                  <td>{complaint.opendate}</td>
-                  <td>{complaint.zip}</td>
+      <div className="dashboard-subcontent-layout-container">
+        <div className="table-container">
+          {!loading ? (
+            <table className="main-complaints-table">
+              <thead>
+                <tr>
+                  <th>Account</th>
+                  <th>Borough</th>
+                  <th>City</th>
+                  {selectedComplaintOption !== "open-cases" ? (
+                    <th>Close Date</th>
+                  ) : null}
+                  <th>Community Board</th>
+                  <th>Complaint Type</th>
+                  <th>Council Dist</th>
+                  <th>Descriptor</th>
+                  <th>Open Date</th>
+                  <th>Zip Code</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="loading-screen">
-            <p>Loading...</p>
-          </div>
-        )}
-      </div>
-
-      <div className="extra-dashboard-content-container">
-        <div className="top-complaint-container">
-          <h3>Top 3 Complaint Types</h3>
-          <ol>
-            {topThreeComplaintTypes ? (
-              topThreeComplaintTypes.map((complaintType, idx) => (
-                <li key={idx}>
-                  <strong>{complaintType.complaint_type}</strong>
-                </li>
-              ))
-            ) : (
-              <li>No complaint type to display</li>
-            )}
-          </ol>
+              </thead>
+              <tbody>
+                {complaints.length > 0 ? (
+                  complaints.map((complaint, idx) => (
+                    <tr key={idx}>
+                      <td>{complaint.account}</td>
+                      <td>{complaint.borough}</td>
+                      <td>{complaint.city}</td>
+                      {selectedComplaintOption !== "open-cases" ? (
+                        <td className="no-wrap">{complaint.closedate}</td>
+                      ) : null}
+                      <td>{complaint.community_board}</td>
+                      <td>{complaint.complaint_type}</td>
+                      <td>{complaint.council_dist}</td>
+                      <td>{complaint.descriptor}</td>
+                      <td className="no-wrap">{complaint.opendate}</td>
+                      <td>{complaint.zip}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <div className="no-complaints-found-div">
+                    No complaints found
+                  </div>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <div className="loading-screen">
+              <p>Loading...</p>
+            </div>
+          )}
         </div>
-        <button
-          className="my-constituents-complaints-btn"
-          onClick={getComplaintsBySameDist}
-        >
-          Complaints by My Constituents
-        </button>
+
+        <div className="extra-dashboard-content-container">
+          <div className="top-complaint-container">
+            <h3>Top 3 Complaint Types</h3>
+            <ol>
+              {topThreeComplaintTypes ? (
+                topThreeComplaintTypes.map((complaintType, idx) => (
+                  <li key={idx}>
+                    <strong>{complaintType.complaint_type}</strong>
+                  </li>
+                ))
+              ) : (
+                <li>No complaint type to display</li>
+              )}
+            </ol>
+          </div>
+          <div className="case-count">
+            <h4>Number of open cases</h4> <p>{openCaseCount}</p>
+          </div>
+          <div className="case-count">
+            <h4>Number of closed cases</h4> <p>{closedCaseCount}</p>
+          </div>
+          <button
+            className="my-constituents-complaints-btn"
+            onClick={getComplaintsBySameDist}
+          >
+            Complaints by My Constituents
+          </button>
+        </div>
       </div>
     </div>
   );

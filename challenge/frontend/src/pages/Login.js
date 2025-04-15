@@ -1,41 +1,18 @@
 import React, { useState } from "react";
+import useLogin from "../hooks/useLogin";
+import { useHistory } from "react-router-dom";
 
 function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const { loginUser, loading, error } = useLogin();
+  const history = useHistory();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/login/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (
-          errorData.non_field_errors &&
-          errorData.non_field_errors.length > 0
-        ) {
-          throw new Error(errorData.non_field_errors[0]);
-        } else {
-          throw new Error("Error occured trying to log in");
-        }
-      }
-      const data = await response.json();
-      setError(null);
-      setLoading(false);
-    } catch (error) {
-      setError(error.message);
-      setLoading(false);
+    const token = await loginUser({ username, password });
+    if (token) {
+      history.push("/");
     }
   };
   return (
@@ -58,7 +35,9 @@ function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button type="submit">{loading ? "Loading..." : "Log in"}</button>
+        <button disabled={loading} type="submit">
+          {loading ? "Loading..." : "Log in"}
+        </button>
         {error ? (
           <div className="error">
             <p>{error}</p>
