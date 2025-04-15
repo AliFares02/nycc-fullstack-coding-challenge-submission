@@ -19,7 +19,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token 6670be5a561af8f1f1f173ad5e4e58485bf2cf1c",
+            Authorization: "Token ",
           },
         }
       );
@@ -29,7 +29,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token 6670be5a561af8f1f1f173ad5e4e58485bf2cf1c",
+            Authorization: "Token ",
           },
         }
       );
@@ -65,7 +65,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token 6670be5a561af8f1f1f173ad5e4e58485bf2cf1c",
+            Authorization: "Token ",
           },
         }
       );
@@ -91,7 +91,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token 6670be5a561af8f1f1f173ad5e4e58485bf2cf1c",
+            Authorization: "Token ",
           },
         }
       );
@@ -117,7 +117,7 @@ function Dashboard() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Token 6670be5a561af8f1f1f173ad5e4e58485bf2cf1c",
+            Authorization: "Token ",
           },
         }
       );
